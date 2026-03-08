@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Insurance Fraud Detector</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      width: 100%;
+      max-width: 580px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      background: linear-gradient(90deg, #1a73e8, #0d47a1);
+      color: #fff;
+      padding: 26px 32px;
+    }
+    .card-header h1 { font-size: 1.5rem; font-weight: 700; }
+    .card-header p  { font-size: 0.85rem; opacity: 0.80; margin-top: 4px; }
+
+    .card-body { padding: 28px 32px; }
+
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #1a73e8;
+      margin: 22px 0 12px;
+      border-bottom: 2px solid #e8f0fe;
+      padding-bottom: 5px;
+    }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media(max-width:500px){ .grid { grid-template-columns: 1fr; } }
+
+    .field label {
+      display: block;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 4px;
+    }
+    .field input, .field select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid #d0d7de;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      transition: border-color .2s;
+      background: #fafafa;
+    }
+    .field input:focus, .field select:focus {
+      outline: none;
+      border-color: #1a73e8;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(26,115,232,.12);
+    }
+
+    .btn-predict {
+      margin-top: 26px;
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(90deg, #1a73e8, #0d47a1);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: .4px;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn-predict:hover  { opacity: .9; }
+    .btn-predict:active { transform: scale(0.99); }
+
+    #result {
+      display: none;
+      margin-top: 24px;
+      border-radius: 12px;
+      padding: 22px 24px;
+      text-align: center;
+    }
+    #result.fraud      { background: #fde8e8; border: 2px solid #e53935; }
+    #result.legitimate { background: #e8f5e9; border: 2px solid #43a047; }
+
+    .verdict { font-size: 1.8rem; font-weight: 800; margin-bottom: 5px; }
+    #result.fraud      .verdict { color: #c62828; }
+    #result.legitimate .verdict { color: #2e7d32; }
+
+    .sub { font-size: 0.88rem; color: #555; margin-bottom: 14px; }
+
+    .badges { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+    .badge { padding: 5px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+    .badge-prob        { background: #fff3e0; color: #e65100; }
+    .badge-risk-HIGH   { background: #fde8e8; color: #b71c1c; }
+    .badge-risk-MEDIUM { background: #fff8e1; color: #f57f17; }
+    .badge-risk-LOW    { background: #e8f5e9; color: #1b5e20; }
+
+    .spinner {
+      display: none;
+      border: 4px solid #e3e3e3;
+      border-top-color: #1a73e8;
+      border-radius: 50%;
+      width: 32px; height: 32px;
+      animation: spin .8s linear infinite;
+      margin: 18px auto 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="card-header">
+    <h1>🔍 Insurance Fraud Detector</h1>
+    <p>Fill in the claim details below to check for fraud</p>
+  </div>
+
+  <div class="card-body">
+
+    <div class="section-title">💰 Claim Amounts</div>
+    <div class="grid">
+      <div class="field">
+        <label>Total Claim Amount ($)</label>
+        <input type="number" id="total_claim_amount" value="15000" min="0"/>
+      </div>
+      <div class="field">
+        <label>Injury Claim ($)</label>
+        <input type="number" id="injury_claim" value="5000" min="0"/>
+      </div>
+      <div class="field">
+        <label>Vehicle Claim ($)</label>
+        <input type="number" id="vehicle_claim" value="7000" min="0"/>
+      </div>
+      <div class="field">
+        <label>Property Claim ($)</label>
+        <input type="number" id="property_claim" value="3000" min="0"/>
+      </div>
+    </div>
+
+    <div class="section-title">🚗 Incident Info</div>
+    <div class="grid">
+      <div class="field">
+        <label>Incident Type</label>
+        <select id="incident_type">
+          <option>Single Vehicle Collision</option>
+          <option>Multi-vehicle Collision</option>
+          <option>Vehicle Theft</option>
+          <option>Parked Car</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Incident Severity</label>
+        <select id="incident_severity">
+          <option>Minor Damage</option>
+          <option>Major Damage</option>
+          <option>Total Loss</option>
+          <option>Trivial Damage</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Property Damage</label>
+        <select id="property_damage">
+          <option>NO</option>
+          <option>YES</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Police Report Available</label>
+        <select id="police_report_available">
+          <option>NO</option>
+          <option>YES</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title">🧾 Supporting Evidence</div>
+    <div class="grid">
+      <div class="field">
+        <label>Number of Witnesses</label>
+        <input type="number" id="witnesses" value="1" min="0" max="10"/>
+      </div>
+      <div class="field">
+        <label>Bodily Injuries</label>
+        <input type="number" id="bodily_injuries" value="0" min="0" max="5"/>
+      </div>
+      <div class="field">
+        <label>Authorities Contacted</label>
+        <select id="authorities_contacted">
+          <option>Police</option>
+          <option>Ambulance</option>
+          <option>Fire</option>
+          <option>None</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Vehicles Involved</label>
+        <input type="number" id="number_of_vehicles_involved" value="1" min="1" max="10"/>
+      </div>
+    </div>
+
+    <button class="btn-predict" onclick="predict()">🔮 Check for Fraud</button>
+    <div class="spinner" id="spinner"></div>
+
+    <div id="result">
+      <div class="verdict" id="verdict-text"></div>
+      <div class="sub"    id="sub-text"></div>
+      <div class="badges">
+        <span class="badge badge-prob" id="badge-prob"></span>
+        <span class="badge"           id="badge-risk"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULTS = {
+  months_as_customer: 120, age: 35,
+  policy_state: "OH", policy_csl: "250/500",
+  policy_deductable: 1000, policy_annual_premium: 1200,
+  umbrella_limit: 0, insured_sex: "MALE",
+  insured_education_level: "College", insured_occupation: "sales",
+  insured_hobbies: "reading", insured_relationship: "husband",
+  "capital-gains": 0, "capital-loss": 0,
+  collision_type: "Rear Collision",
+  incident_state: "OH", incident_city: "Columbus",
+  incident_hour_of_the_day: 14,
+  auto_make: "Toyota", auto_model: "Camry", auto_year: 2015
+};
+
+const UI_FIELDS = [
+  "total_claim_amount","injury_claim","vehicle_claim","property_claim",
+  "incident_type","incident_severity","property_damage","police_report_available",
+  "witnesses","bodily_injuries","authorities_contacted","number_of_vehicles_involved"
+];
+
+async function predict() {
+  const spinner = document.getElementById("spinner");
+  const result  = document.getElementById("result");
+  spinner.style.display = "block";
+  result.style.display  = "none";
+
+  const payload = { ...DEFAULTS };
+  UI_FIELDS.forEach(f => {
+    const el = document.getElementById(f);
+    if (el) payload[f] = el.value;
+  });
+
+  try {
+    const res  = await fetch("/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    spinner.style.display = "none";
+
+    if (data.error) { alert("Error: " + data.error); return; }
+
+    const isFraud = data.prediction === "FRAUD";
+    result.className = isFraud ? "fraud" : "legitimate";
+    document.getElementById("verdict-text").textContent =
+      isFraud ? "⚠️ FRAUD DETECTED" : "✅ LEGITIMATE CLAIM";
+    document.getElementById("sub-text").textContent =
+      `This claim has a ${data.probability}% probability of being fraudulent.`;
+    document.getElementById("badge-prob").textContent =
+      `Fraud Probability: ${data.probability}%`;
+    const riskBadge = document.getElementById("badge-risk");
+    riskBadge.textContent = `Risk Level: ${data.risk_level}`;
+    riskBadge.className   = `badge badge-risk-${data.risk_level}`;
+    result.style.display = "block";
+    result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch(e) {
+    spinner.style.display = "none";
+    alert("Request failed: " + e.message);
+  }
+}
+</script>
+</body>
+</html>
